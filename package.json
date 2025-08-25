@@ -3,6 +3,7 @@
   "version": "1.1.1",
   "description": "This Node.js package offers a straightforward interface for Brother label printers, utilizing the raster command system for binary bitmap data handling.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -33,7 +33,7 @@ You can download a sample PNG file [here](https://github.com/yiqun12/node-brothe
 `Note: pngs should have a width of 720 pixels for optimal results`
 
 ```javascript
-const { printPngFile } = require("node-brother-label-printer");
+import { printPngFile } from "node-brother-label-printer";
 
 printPngFile({
   vendorId: 0x04f9,

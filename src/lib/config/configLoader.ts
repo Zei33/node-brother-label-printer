@@ -22,79 +22,161 @@ import type {
 import { logger } from '../utils/logger.js';
 
 /**
+ * Try to get import.meta.url in ESM environment.
+ */
+function getImportMetaUrl(): string | null {
+	try {
+		// @ts-ignore - import.meta is only available in ESM
+		const meta = import.meta;
+		// Check if url property exists and is a non-empty string
+		if ('url' in meta && typeof meta.url === 'string' && meta.url !== '') {
+			return meta.url;
+		}
+	} catch {
+		// Not in ESM environment
+	}
+	return null;
+}
+
+/**
+ * Try to get __dirname in CJS environment.
+ */
+function getDirname(): string | null {
+	try {
+		// @ts-ignore - __dirname is only available in CJS
+		if (typeof __dirname === 'string' && __dirname !== '') {
+			// @ts-ignore - __dirname is only available in CJS
+			return __dirname;
+		}
+	} catch {
+		// Not in CJS environment
+	}
+	return null;
+}
+
+/**
+ * Create a require function that works in both ESM and CJS environments.
+ */
+function createCompatibleRequire(): NodeJS.Require {
+	// Try ESM approach
+	const importMetaUrl = getImportMetaUrl();
+	if (importMetaUrl !== null) {
+		return createRequire(importMetaUrl);
+	}
+	
+	// Try CJS approach
+	try {
+		// @ts-ignore - require is only available in CJS
+		if (typeof require !== 'undefined') {
+			// @ts-ignore - require is only available in CJS
+			return require;
+		}
+	} catch {
+		// require not available
+	}
+	
+	// Fallback: create require from current working directory
+	return createRequire(process.cwd());
+}
+
+/**
+ * Get the current module's directory.
+ */
+function getCurrentDirectory(): string {
+	// Try ESM approach
+	const importMetaUrl = getImportMetaUrl();
+	if (importMetaUrl !== null) {
+		return path.dirname(fileURLToPath(importMetaUrl));
+	}
+	
+	// Try CJS approach
+	const dirname = getDirname();
+	if (dirname !== null) {
+		return dirname;
+	}
+	
+	// Fallback
+	return process.cwd();
+}
+
+/**
+ * Check if a directory contains our package.json.
+ */
+function isOurPackageRoot(dir: string): boolean {
+	const packagePath = path.join(dir, 'package.json');
+	if (!fs.existsSync(packagePath)) {
+		return false;
+	}
+	
+	try {
+		const packageContent = fs.readFileSync(packagePath, 'utf-8');
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any
+		const packageData = JSON.parse(packageContent);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Checking package.json structure
+		return packageData.name === 'node-brother-label-printer';
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Search up the directory tree for the package root.
+ */
+function findPackageRootBySearching(startDir: string): string | null {
+	let dir = startDir;
+	const maxDepth = 10;
+	
+	for (let i = 0; i < maxDepth; i++) {
+		if (isOurPackageRoot(dir)) {
+			return dir;
+		}
+		
+		const parent = path.dirname(dir);
+		if (parent === dir) break; // Reached filesystem root
+		dir = parent;
+	}
+	
+	return null;
+}
+
+/**
+ * Try to resolve the package root using Node's module resolution.
+ */
+function resolvePackageRoot(requireFunc: NodeJS.Require): string | null {
+	try {
+		const packageJsonPath = requireFunc.resolve('node-brother-label-printer/package.json');
+		return path.dirname(packageJsonPath);
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Get the package root directory using Node.js standard module resolution.
  * This works in both ESM and CJS by using createRequire.
  */
 function getPackageRoot(): string {
-	let requireFunc: NodeRequire;
+	// Create a compatible require function
+	const requireFunc = createCompatibleRequire();
 	
-	try {
-		// In ESM, create a require function
-		// @ts-ignore - import.meta.url is only available in ESM
-		if (typeof import.meta !== 'undefined' && import.meta.url) {
-			// @ts-ignore - import.meta.url is only available in ESM
-			requireFunc = createRequire(import.meta.url);
-		} else {
-			// In CJS, use the native require
-			// @ts-ignore - require is only available in CJS
-			requireFunc = require;
-		}
-	} catch {
-		// Fallback: create require from current working directory
-		requireFunc = createRequire(process.cwd());
+	// Try to resolve using Node's module resolution
+	const resolved = resolvePackageRoot(requireFunc);
+	if (resolved !== null) {
+		return resolved;
 	}
 	
-	try {
-		// Resolve the package.json path using Node's module resolution
-		const packageJsonPath = requireFunc.resolve('node-brother-label-printer/package.json');
-		// Get the directory containing package.json (the package root)
-		return path.dirname(packageJsonPath);
-	} catch (error) {
-		// If module resolution fails, we might be in development
-		// Try to find the package root by searching up from current directory
-		logger.warn('Could not resolve package via require.resolve, searching for package root...');
-		
-		// In development, use import.meta.url or __dirname to find our location
-		let currentDir: string;
-		try {
-			// @ts-ignore - import.meta.url is only available in ESM
-			if (typeof import.meta !== 'undefined' && import.meta.url) {
-				// @ts-ignore - import.meta.url is only available in ESM
-				currentDir = path.dirname(fileURLToPath(import.meta.url));
-			} else {
-				// @ts-ignore - __dirname is only available in CJS
-				currentDir = __dirname;
-			}
-		} catch {
-			currentDir = process.cwd();
-		}
-		
-		// Search up for package.json
-		let dir = currentDir;
-		for (let i = 0; i < 10; i++) {
-			const packagePath = path.join(dir, 'package.json');
-			if (fs.existsSync(packagePath)) {
-				try {
-					const packageContent = fs.readFileSync(packagePath, 'utf-8');
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any
-					const packageData = JSON.parse(packageContent);
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Checking package.json structure
-					if (packageData.name === 'node-brother-label-printer') {
-						return dir;
-					}
-				} catch {
-					// Not our package.json, continue searching
-				}
-			}
-			const parent = path.dirname(dir);
-			if (parent === dir) break;
-			dir = parent;
-		}
-		
-		// Last resort fallback
-		logger.error('Could not find package root, using current directory as fallback');
-		return currentDir;
+	// Fallback: search up from current directory (development mode)
+	logger.warn('Could not resolve package via require.resolve, searching for package root...');
+	const currentDir = getCurrentDirectory();
+	
+	const found = findPackageRootBySearching(currentDir);
+	if (found !== null) {
+		return found;
 	}
+	
+	// Last resort fallback
+	logger.error('Could not find package root, using current directory as fallback');
+	return currentDir;
 }
 
 const PACKAGE_ROOT = getPackageRoot();

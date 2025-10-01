@@ -29,7 +29,7 @@ export default [
 			"no-mixed-spaces-and-tabs": "error",
 			"no-console": "off",
 			"@typescript-eslint/no-console": "off",
-			//"@typescript-eslint/ban-ts-comment": "off",
+			"@typescript-eslint/ban-ts-comment": "off", // Disabled because ts-ignore is used for esm/cjs compatibility.
 			//"ban-ts-comment": "off",
 			"indent": ["error", "tab", { "MemberExpression": 0, "SwitchCase": 1 }],
 			"@typescript-eslint/prefer-destructuring": "off",

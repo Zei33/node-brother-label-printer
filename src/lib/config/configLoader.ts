@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { 
 	PrinterCapabilities, 
 	LabelConfiguration,
@@ -19,8 +20,90 @@ import type {
 } from '../../types/index.js';
 import { logger } from '../utils/logger.js';
 
-/** Base directory for configuration files relative to project root */
-const CONFIG_BASE = path.join(process.cwd(), 'config');
+/**
+ * Get the current module directory based on the runtime environment.
+ * Uses a simple approach that works in both ESM and CJS.
+ */
+function getCurrentModuleDir(): string {
+	// Use a marker file to find our location
+	// The config loader is always at lib/config/configLoader in both src and dist
+	// So we can navigate relative to wherever this module is loaded from
+	
+	// First, try to use import.meta.url for ESM (safest approach)
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- Runtime check
+		const g = globalThis as any;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Runtime check
+		if (g.import && g.import.meta && typeof g.import.meta.url === 'string') {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument -- Already validated
+			const filename = fileURLToPath(g.import.meta.url);
+			return path.dirname(filename);
+		}
+	} catch {
+		// Not in ESM environment
+	}
+	
+	// Fallback: Use the fact that this file's structure is known
+	// We're in lib/config, so go up 3 levels to reach package root
+	return process.cwd();
+}
+
+/**
+ * Check if a directory is the package root by verifying package.json.
+ */
+function isPackageRoot(dir: string): boolean {
+	const configPath = path.join(dir, 'config');
+	const packageJsonPath = path.join(dir, 'package.json');
+	
+	if (!fs.existsSync(configPath) || !fs.existsSync(packageJsonPath)) {
+		return false;
+	}
+	
+	try {
+		const packageContent = fs.readFileSync(packageJsonPath, 'utf-8');
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any
+		const packageData = JSON.parse(packageContent);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Checking package.json structure
+		return packageData.name === 'node-brother-label-printer';
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Find the package root directory by searching up from the current module location.
+ * This works in both ESM and CJS environments, and handles both development and production.
+ */
+function findPackageRoot(): string {
+	const currentDir = getCurrentModuleDir();
+	
+	// Search up the directory tree for the config directory
+	let dir = currentDir;
+	const maxDepth = 10; // Limit search depth to prevent infinite loops
+	
+	for (let i = 0; i < maxDepth; i++) {
+		if (isPackageRoot(dir)) {
+			return dir;
+		}
+		
+		const parent = path.dirname(dir);
+		if (parent === dir) break; // Reached filesystem root
+		dir = parent;
+	}
+	
+	// If we can't find the package root, use a fallback
+	// This handles the case where the package is installed as a dependency
+	if (currentDir.includes('node_modules')) {
+		const parts = currentDir.split('node_modules');
+		return parts[0] + 'node_modules/node-brother-label-printer';
+	}
+	
+	return currentDir;
+}
+
+const PACKAGE_ROOT = findPackageRoot();
+const CONFIG_BASE = path.join(PACKAGE_ROOT, 'config');
+
 /** Directory containing label configuration JSON files */
 const LABELS_CONFIG_DIR = path.join(CONFIG_BASE, 'labels');
 /** Directory containing printer configuration JSON files */
@@ -127,6 +210,8 @@ export function loadLabelConfigurations(): Map<string, LabelConfig> {
 		// Check if config directory exists
 		if (!fs.existsSync(LABELS_CONFIG_DIR)) {
 			logger.warn(`Label config directory not found: ${LABELS_CONFIG_DIR}`);
+			logger.warn(`Expected at: ${path.resolve(LABELS_CONFIG_DIR)}`);
+			logger.warn(`Package root: ${PACKAGE_ROOT}`);
 			return labels;
 		}
 		
@@ -167,6 +252,8 @@ export function loadPrinterConfigurations(): Map<string, PrinterConfig> {
 		// Check if config directory exists
 		if (!fs.existsSync(PRINTERS_CONFIG_DIR)) {
 			logger.warn(`Printer config directory not found: ${PRINTERS_CONFIG_DIR}`);
+			logger.warn(`Expected at: ${path.resolve(PRINTERS_CONFIG_DIR)}`);
+			logger.warn(`Package root: ${PACKAGE_ROOT}`);
 			return printers;
 		}
 		

@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, esm-ts-dynamic-rewrite ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linter
+      run: npm run lint
+      
+    - name: Run tests
+      run: npm run test:coverage
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Upload coverage reports to Codecov
+      if: matrix.node-version == '20.x'
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Update Version and License Badges
+      if: matrix.node-version == '20.x' && github.event_name == 'push'
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        LICENSE=$(node -p "require('./package.json').license")
+        curl -X PATCH \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.GIST_TOKEN }}" \
+          https://api.github.com/gists/0959a9de4515533d33a2f09c220303dd \
+          -d '{
+            "files": {
+              "node-brother-label-printer-version.json": {
+                "content": "{\"schemaVersion\":1,\"label\":\"version\",\"message\":\"'$VERSION'\",\"color\":\"blue\"}"
+              },
+              "node-brother-label-printer-license.json": {
+                "content": "{\"schemaVersion\":1,\"label\":\"license\",\"message\":\"'$LICENSE'\",\"color\":\"yellow\"}"
+              }
+            }
+          }'
+    
+    - name: Generate Badges
+      if: matrix.node-version == '20.x' && github.event_name == 'push'
+      uses: gaelgirodon/ci-badges-action@v1
+      with:
+        gist-id: 0959a9de4515533d33a2f09c220303dd
+        token: ${{ secrets.GIST_TOKEN }}
+        prefix: node-brother-label-printer
+
+  build-check:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build and verify package
+      run: |
+        npm run build
+        npm pack --dry-run
+        
+    - name: Check package contents
+      run: |
+        ls -la dist/
+        echo "Checking ESM build..."
+        test -f dist/index.js
+        test -f dist/index.d.ts
+        echo "Checking CJS build..."
+        test -f dist/index.cjs
+        echo "Build verification complete!"

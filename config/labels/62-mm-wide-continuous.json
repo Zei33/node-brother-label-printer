@@ -1,0 +1,16 @@
+{
+  "name": "62-mm-wide continuous",
+  "displayName": "62 Mm Wide Continuous",
+  "type": "continuous",
+  "widthMm": 62,
+  "lengthMm": null,
+  "calibration": {
+    "leftOffsetAdjustment": 9,
+    "topOffsetAdjustment": 0,
+    "lengthAdjustmentMm": 0
+  },
+  "processingGroup": "standard",
+  "requiresSpecialHandling": false,
+  "specialHandlingNotes": null,
+  "forceStandardQuality": true
+}

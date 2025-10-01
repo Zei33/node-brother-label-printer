@@ -1,0 +1,13 @@
+{
+  "name": "38x90-mm-die-cut",
+  "displayName": "38x90 Mm Die Cut",
+  "type": "die-cut",
+  "widthMm": 38,
+  "lengthMm": 90,
+  "calibration": {
+    "lengthAdjustmentMm": -5.25
+  },
+  "processingGroup": "standard",
+  "requiresSpecialHandling": false,
+  "specialHandlingNotes": "Negative length adjustment prevents cutting overshoot into next label"
+}

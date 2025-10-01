@@ -1,0 +1,14 @@
+{
+  "name": "29x90-mm-die-cut",
+  "displayName": "29x90 Mm Die Cut",
+  "type": "die-cut",
+  "widthMm": 29,
+  "lengthMm": 90,
+  "calibration": {
+    "leftOffsetAdjustment": 4,
+    "lengthAdjustmentMm": -5.25
+  },
+  "processingGroup": "standard",
+  "requiresSpecialHandling": false,
+  "specialHandlingNotes": "Negative length adjustment prevents cutting overshoot into next label"
+}

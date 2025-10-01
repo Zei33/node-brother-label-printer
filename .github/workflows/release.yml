@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write # This is required for npm provenance
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Verify build artifacts
+      run: |
+        echo "Verifying build artifacts..."
+        test -f dist/index.js || (echo "ESM index.js missing" && exit 1)
+        test -f dist/index.cjs || (echo "CJS index.cjs missing" && exit 1)
+        test -f dist/index.d.ts || (echo "Type definitions missing" && exit 1)
+        echo "All build artifacts verified!"
+        
+    - name: Publish to NPM
+      run: npm publish --provenance --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-github-release:
+    runs-on: ubuntu-latest
+    needs: release
+    
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## Changes in v${{ steps.version.outputs.VERSION }}
+          
+          See [CHANGELOG.md](./CHANGELOG.md) for full details.
+          
+          ### Installation
+          ```bash
+          npm install node-brother-label-printer@${{ steps.version.outputs.VERSION }}
+          ```
+          
+          ### Usage
+          This release supports both CommonJS and ESM imports:
+          ```javascript
+          // ESM
+          import { printPngFile } from 'node-brother-label-printer';
+          
+          // CommonJS
+          const { printPngFile } = require('node-brother-label-printer');
+          ```
+        draft: false
+        prerelease: false

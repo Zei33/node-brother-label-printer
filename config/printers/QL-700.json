@@ -1,0 +1,23 @@
+{
+  "model": "QL-700",
+  "productId": "0x2042",
+  "vendorId": "0x04F9",
+  "capabilities": {
+    "supportsCompression": false,
+    "supportsHighResolution": false,
+    "supportsAutoCut": true,
+    "bytesPerLine": 90,
+    "totalPins": 720,
+    "maxWidthMm": 62
+  },
+  "initialization": {
+    "invalidCommandLength": 200,
+    "requiresRasterModeSwitch": false,
+    "expandedModeSupported": true
+  },
+  "supportedLabelGroups": [
+    "standard",
+    "narrow",
+    "special"
+  ]
+}

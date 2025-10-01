@@ -164,8 +164,8 @@ export const PrinterStatusUtils = {
  * @interface InterfaceResult
  */
 export interface InterfaceResult {
-	/** USB output endpoint for sending data (OutEndpoint type, kept as any to avoid USB dependency) */
-	outputEndpoint: any | null;
+	/** USB output endpoint for sending data (OutEndpoint type, kept as unknown to avoid USB dependency) */
+	outputEndpoint: unknown;
 	/** Index of the claimed USB interface */
 	interfaceIndex: number;
 	/** Whether the USB interface has been successfully claimed */

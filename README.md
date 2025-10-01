@@ -6,31 +6,37 @@
 [![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Zei33/0959a9de4515533d33a2f09c220303dd/raw/node-brother-label-printer-jest-tests.json)](https://github.com/Zei33/node-brother-label-printer/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Zei33/0959a9de4515533d33a2f09c220303dd/raw/node-brother-label-printer-lcov-coverage.json)](https://github.com/Zei33/node-brother-label-printer/actions/workflows/ci.yml)
 
-A modern TypeScript library for printing PNG images with Brother Label Printers. Features **automatic printer detection**, **comprehensive label support** (12mm to 102mm), and **adaptive compatibility** for all Brother QL models connected via USB.
+A modern TypeScript library for printing PNG images with Brother Label Printers. Features **JSON-based configuration system**, **automatic printer detection**, **extensible label support**, and **runtime configuration loading** for maximum flexibility.
 
 ## Supported Printers
 
-### Fully Tested & Supported
-- **QL-700** ✨ *Newly added with specialized compatibility*
-- QL-710W, QL-720NW, QL-810W, QL-820NWB
-- QL-1110NWB, QL-1115NWB
+This library is designed to work with all Brother QL series label printers via a flexible JSON configuration system. Simply add a configuration file for your printer model.
 
-### Legacy Support (via capability mapping)
-- QL-500, QL-550, QL-560, QL-570, QL-580N
-- QL-650TD, QL-1050, QL-1060N
+### Supported Brother QL Series
+- **QL-500 Series**: QL-500, QL-550, QL-560, QL-570, QL-580N
+- **QL-600 Series**: QL-650TD
+- **QL-700 Series**: QL-700, QL-710W, QL-720NW
+- **QL-800 Series**: QL-810W, QL-820NWB
+- **QL-1000 Series**: QL-1050, QL-1060N
+- **QL-1100 Series**: QL-1110NWB, QL-1115NWB
+
+### Testing Status
+Currently tested and verified with **QL-700**. Other models should work by adding appropriate configuration files. Contributions of tested configurations are welcome!
+
+See the [Configuration System](#-configuration-system) section to add your printer model.
 
 ## Features
 
+- 🎛️ **JSON Configuration System** - Extend printer and label support via external config files
+- 🔧 **Runtime Configuration Loading** - Add new printers and labels without code changes
 - 🔥 **TypeScript Support** - Full type definitions included
 - 🤖 **Auto-Detection** - Automatically detects printer model and loaded media
-- 📏 **All Label Sizes** - Supports EVERY Brother QL label from 12mm to 102mm
+- 📏 **Extensible Label Support** - Add any label size via JSON configuration
 - 🎯 **Smart Media Detection** - Auto-detects loaded label size and type
 - 🖼️ **Intelligent Image Processing** - Auto-resize, center, and optimize for any label
-- 🔧 **Adaptive Processing** - Optimizes print data based on printer capabilities
+- 🔬 **Calibration System** - Fine-tune positioning and cutting per label via config files
 - 📊 **Status Monitoring** - Real-time printer status checking and error reporting
 - 🗜️ **Smart Compression** - Automatically enables/disables based on printer support
-- 🎛️ **JSON Configuration System** - Extend printer and label support via config files
-- 🔬 **Calibration System** - Fine-tune positioning and cutting for specific labels
 - 📦 **Dual Module Support** - Works with both CommonJS and ES Modules
 - 📝 **Optional Debug Logging** - Enable detailed logging when needed, silent by default
 
@@ -95,7 +101,7 @@ When enabled, you'll see detailed debug information about:
 
 ### 🚀 Auto-Detection (Recommended)
 
-The new auto-detection feature automatically finds your printer and optimizes settings:
+The auto-detection feature automatically finds your printer and optimizes settings:
 
 ```typescript
 import { printPngFileAuto, listAvailablePrinters } from 'node-brother-label-printer';
@@ -117,39 +123,36 @@ await printPngFileAuto({
 const printers = listAvailablePrinters();
 console.log('Available printers:', printers);
 
-// All supported label widths:
-// Continuous: '12-mm-wide continuous', '17-mm-wide continuous', 
-//            '23-mm-wide continuous', '29-mm-wide continuous',
-//            '50-mm-wide continuous', '54-mm-wide continuous',
-//            '62-mm-wide continuous', '102-mm-wide continuous'
-// Die-cut:   '17x54-mm-die-cut', '29x90-mm-die-cut', '38x90-mm-die-cut',
-//            '62x100-mm-die-cut', '102x152-mm-die-cut', and many more!
+// Example configured labels (add more via config/labels/):
+// Continuous: '62-mm-wide continuous', '29-mm-wide continuous', etc.
+// Die-cut:    '29x90-mm-die-cut', '38x90-mm-die-cut', etc.
+// See Configuration System section to add more labels
 
 // Force specific printer if multiple detected
 await printPngFileAuto({
   filename: './sample.png',
-  options: { labelWidth: '29-mm-wide continuous' }, // Any size works!
-  forceProductId: 0x2042 // Force QL-700
+  options: { labelWidth: '62-mm-wide continuous' },
+  forceProductId: 0x2042 // Example: Force specific printer by Product ID
 });
 ```
 
-### 🔧 Manual Configuration (Legacy)
+### 🔧 Manual Configuration
 
-For backward compatibility or when you need manual control:
+For direct control over printer selection:
 
 ```typescript
 import { printPngFile, type PrintPngFileParams } from 'node-brother-label-printer';
 
 const printParams: PrintPngFileParams = {
-  vendorId: 0x04f9,
-  productId: 0x2042, // QL-700
+  vendorId: 0x04f9,              // Brother vendor ID
+  productId: 0x2042,             // Your printer's product ID
   filename: './sample.png',
   options: { 
     landscape: false, 
-    labelWidth: '29-mm-wide continuous', // Now supports all sizes!
+    labelWidth: '62-mm-wide continuous',
     blackwhiteThreshold: 128
   },
-  compression: { enable: false } // QL-700 doesn't support compression
+  compression: { enable: false } // Set based on your printer's capabilities
 };
 
 await printPngFile(printParams);
@@ -201,39 +204,38 @@ printPngFileAuto({
 });
 ```
 
-## 🎯 QL-700 Specific Improvements
+## 🎯 Example Configuration
 
-The QL-700 has been specifically optimized with fixes for known compatibility issues:
+The library includes a reference configuration for the QL-700, demonstrating how the JSON-based system works for any Brother QL printer.
 
-### Key Fixes Applied
-- ✅ **Compression Disabled**: QL-700 doesn't support TIFF compression (unlike newer models)
-- ✅ **Correct Raster Format**: Fixed MSB-first bit ordering and proper 90-byte raster lines
-- ✅ **Proper Margins**: Uses correct 12-pin left/right margins for 62mm labels
-- ✅ **Dynamic Headers**: Print info header uses actual image height instead of hard-coded values
-- ✅ **Mass Storage Detection**: Automatically detects and warns about Editor Lite mode
+### Configuration Files Structure
+- **Printer**: `config/printers/*.json` - Defines capabilities and initialization
+- **Labels**: `config/labels/*.json` - Defines supported label formats with calibration
 
-### QL-700 Usage Notes
-```typescript
-// The library automatically handles QL-700 quirks
-const printer = detectSingleBrotherPrinter();
-if (printer?.capabilities.model === 'QL-700') {
-  console.log('QL-700 detected - optimizations applied automatically');
-  // Compression will be disabled automatically
-  // Margins and raster format optimized for QL-700
-}
-```
+### Example: QL-700 Configuration
 
-### Troubleshooting QL-700
+The QL-700 configuration (`config/printers/QL-700.json`) demonstrates key printer properties:
 
-**Problem**: Printer blinks green but doesn't print
-- **Solution**: Make sure printer is in Printer Mode, not Editor Lite (mass storage) mode
-- **Fix**: Press the E/EL button to switch modes
+- **Compression support**: `supportsCompression: false` - some printers support TIFF compression, others don't
+- **Bytes per line**: `bytesPerLine: 90` - defines raster line format (varies by max width)
+- **Total pins**: `totalPins: 720` - determines maximum label width (720 = 62mm max)
+- **Auto-cut support**: `supportsAutoCut: true` - enables automatic label cutting
+- **Initialization settings**: Model-specific startup sequences
+
+Your printer may have different values - check Brother's documentation or similar models for reference.
+
+### Common Troubleshooting
+
+**Problem**: Printer not detected or blinks but doesn't print
+- **Solution**: Some printers have dual modes (printer mode vs. mass storage/editor mode)
+- **Fix**: Check for a mode switch button on your printer (like E/EL on QL-700)
 
 **Problem**: "Printer is in mass storage mode" error
-- **Solution**: The QL-700 has a dual-mode switch. Use the E/EL button to switch to printer mode
+- **Solution**: Switch printer to printer mode using the mode toggle button
 
 **Problem**: Print quality issues or garbled output
-- **Solution**: The new adaptive processing handles this automatically with proper bit ordering and margins
+- **Solution**: Verify printer configuration values (especially `bytesPerLine` and `totalPins`)
+- **Check**: Label configuration calibration values may need adjustment
 
 ### Advanced Image Processing
 
@@ -253,52 +255,68 @@ async function processAndPrint() {
   // Parse PNG file
   const image: PngImage = await parseFileAsync('./my-label.png');
   
-  // Get printer capabilities
-  const capabilities = getPrinterCapabilities(0x2042); // QL-700
-  if (!capabilities) throw new Error('Printer not supported');
+  // Get printer capabilities from config (use your printer's product ID)
+  const capabilities = getPrinterCapabilities(0x2042); // Example: QL-700's product ID
+  if (!capabilities) throw new Error('Printer not configured - add config file');
   
-  // Convert to printer format - now supports all label sizes!
+  // Convert to printer format with configured label
   const printData = convert(image, {
-    landscape: true,
-    labelWidth: '17-mm-wide continuous', // Even narrow labels work!
-    blackwhiteThreshold: 150
+    landscape: false,
+    labelWidth: '62-mm-wide continuous', // Use any configured label
+    blackwhiteThreshold: 128
   }, {
-    enable: true // Compression auto-disabled if not supported
+    enable: false // Respects printer's supportsCompression setting from config
   }, capabilities);
   
-  // The library will automatically:
-  // - Resize image to fit 17mm width
-  // - Center the image on the label
-  // - Adjust margins appropriately
-  // - Apply printer-specific optimizations
-  // - Log all adjustments made
+  // The library automatically:
+  // - Loads printer config from config/printers/YOUR-PRINTER.json
+  // - Loads label config from config/labels/YOUR-LABEL.json
+  // - Applies calibration adjustments from label config
+  // - Optimizes based on printer capabilities
+  // - Logs all processing steps (if logging enabled)
   console.log(`Generated ${printData.length} bytes of print data`);
 }
 ```
 
 ## 🎛️ Configuration System
 
-The library includes a powerful JSON-based configuration system for printers and labels, allowing you to extend support and fine-tune behavior without modifying code.
+The library uses a powerful JSON-based configuration system that allows you to add printer and label support without modifying code. All configurations are loaded at runtime from the `config/` directory.
 
-### Configuration Files
+### Directory Structure
 
-Configuration files are stored in the `config/` directory:
+```
+config/
+├── printers/         # Printer specifications (add your printer here)
+│   └── *.json       # One file per printer model
+├── labels/           # Label specifications with calibrations
+│   └── *.json       # One file per label format
+└── README.md         # Detailed configuration guide
+```
 
-- **`config/printers/`** - Printer specifications (capabilities, USB IDs, initialization)
-- **`config/labels/`** - Label specifications (dimensions, calibrations)
+### Included Example Configurations
 
-### Adding New Printers
+**Printer Example**: QL-700 (`config/printers/QL-700.json`)
 
-Create a JSON file in `config/printers/` with your printer's specifications:
+**Label Examples**:
+- `62-mm-wide continuous` - Standard continuous labels
+- `29x90-mm-die-cut` - Die-cut labels with calibration
+- `38x90-mm-die-cut` - Die-cut labels with calibration
+
+Use these as templates for adding your own printer and label configurations.
+
+### Adding Your Printer
+
+1. Find your printer's USB Product ID using [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) or `lsusb`
+2. Create `config/printers/YOUR-MODEL.json`:
 
 ```json
 {
-  "model": "QL-700",
-  "productId": "0x2042",
+  "model": "QL-720NW",
+  "productId": "0x2049",
   "vendorId": "0x04F9",
   "capabilities": {
-    "supportsCompression": false,
-    "supportsHighResolution": false,
+    "supportsCompression": true,
+    "supportsHighResolution": true,
     "supportsAutoCut": true,
     "bytesPerLine": 90,
     "totalPins": 720,
@@ -313,73 +331,86 @@ Create a JSON file in `config/printers/` with your printer's specifications:
 }
 ```
 
-### Adding New Labels
+**Key fields**:
+- `productId` - Your printer's USB Product ID (hex string)
+- `supportsCompression` - Whether printer supports TIFF PackBits compression
+- `bytesPerLine` - Raster line byte count (usually 90 for 62mm, 162 for 102mm printers)
+- `totalPins` - Print head pins (720 for 62mm printers, 1296 for 102mm printers)
+- `maxWidthMm` - Maximum label width supported
 
-Create a JSON file in `config/labels/` with label specifications and calibration:
+### Adding Label Formats
+
+1. Create `config/labels/YOUR-LABEL.json`:
 
 ```json
 {
-  "name": "29x90-mm-die-cut",
-  "displayName": "29x90 Mm Die Cut",
-  "type": "die-cut",
-  "widthMm": 29,
-  "lengthMm": 90,
+  "name": "17-mm-wide continuous",
+  "displayName": "17mm Wide Continuous",
+  "type": "continuous",
+  "widthMm": 17,
+  "lengthMm": null,
   "calibration": {
-    "leftOffsetAdjustment": 4,
-    "lengthAdjustmentMm": -5.25
+    "leftOffsetAdjustment": 0,
+    "topOffsetAdjustment": 0,
+    "lengthAdjustmentMm": 0
+  },
+  "processingGroup": "narrow",
+  "requiresSpecialHandling": false,
+  "specialHandlingNotes": null
+}
+```
+
+2. For die-cut labels, include `lengthMm`:
+
+```json
+{
+  "name": "62x100-mm-die-cut",
+  "displayName": "62x100mm Die Cut",
+  "type": "die-cut",
+  "widthMm": 62,
+  "lengthMm": 100,
+  "calibration": {
+    "leftOffsetAdjustment": 0,
+    "lengthAdjustmentMm": -3
   },
   "processingGroup": "standard",
-  "requiresSpecialHandling": false,
-  "specialHandlingNotes": "Negative length adjustment prevents cutting overshoot into next label"
+  "requiresSpecialHandling": false
 }
 ```
 
 ### Calibration Parameters
 
-Fine-tune printing behavior for specific label formats:
+Fine-tune label positioning and cutting:
 
-- **`leftOffsetAdjustment`** - Horizontal positioning adjustment in pixels (+ = right, - = left)
-- **`topOffsetAdjustment`** - Vertical positioning adjustment in pixels (+ = down, - = up)  
-- **`lengthAdjustmentMm`** - Die-cut labels only: Adjusts raster lines sent to prevent cutting overshoots (- = send fewer lines for shorter cut, + = send more lines)
+- **`leftOffsetAdjustment`** - Horizontal shift in pixels (+ = right, - = left)
+- **`topOffsetAdjustment`** - Vertical shift in pixels (+ = down, - = up)
+- **`lengthAdjustmentMm`** - Die-cut only: Adjust cut length (- = shorter, + = longer)
 
-**Advanced calibration options** (rarely needed):
-- **`specialLeftOffset`** - Override value for special positioning cases (bypasses standard calculation)
-- **`bypassStandardCalculation`** - Whether to bypass standard margin calculations entirely
+**Example**: If labels are cutting into the next label, use negative `lengthAdjustmentMm`:
+```json
+"lengthAdjustmentMm": -5.25
+```
 
-**Note**: Most labels only need `leftOffsetAdjustment` and/or `lengthAdjustmentMm`. The advanced options are for special cases with unique positioning requirements.
+See `config/README.md` for detailed calibration testing procedures.
 
-See `config/README.md` for detailed calibration guidelines and testing procedures.
+### Testing Your Configuration
+
+1. Add your config files to `config/printers/` and `config/labels/`
+2. Build the library: `npm run build`
+3. Test with your printer:
+
+```bash
+node test-label-printing.js
+```
+
+4. Adjust calibration values as needed and rebuild
 
 ### Configuration Loading
 
-The configuration system automatically loads JSON files from the `config/` directory at runtime:
-
-- **Caching**: Configurations are cached for 1 minute during development to avoid repeated file I/O
-- **Auto-reload**: Changes to config files are picked up automatically after cache expiration
-- **Validation**: Invalid config files are logged and skipped, not blocking library operation
-
-### Supported Label Sizes Reference
-
-#### Continuous Labels (Tape Rolls)
-| Width | Use Case | Example Declaration |
-|-------|----------|--------------------|
-| 12mm | Cables, small items | `'12-mm-wide continuous'` |
-| 17mm | File folders | `'17-mm-wide continuous'` |
-| 23mm | Name badges | `'23-mm-wide continuous'` |
-| 29mm | Address labels | `'29-mm-wide continuous'` |
-| 50mm | Shipping labels | `'50-mm-wide continuous'` |
-| 54mm | Large addresses | `'54-mm-wide continuous'` |
-| 62mm | Standard shipping | `'62-mm-wide continuous'` |
-| 102mm | Wide format (QL-1050/1060N) | `'102-mm-wide continuous'` |
-
-#### Die-Cut Labels (Pre-cut)
-| Size | Use Case | Example Declaration |
-|------|----------|--------------------|
-| 17×54mm | Small labels | `'17x54-mm-die-cut'` |
-| 29×90mm | Address labels | `'29x90-mm-die-cut'` |
-| 38×90mm | Shipping labels | `'38x90-mm-die-cut'` |
-| 62×100mm | Large shipping | `'62x100-mm-die-cut'` |
-| 102×152mm | Extra large (QL-1050/1060N) | `'102x152-mm-die-cut'` |
+- **Runtime loading**: JSON files loaded when library starts
+- **Caching**: 1-minute cache to avoid repeated file I/O
+- **Validation**: Invalid configs logged and skipped gracefully
+- **No code changes**: Just add JSON files and rebuild
 
 ### Label Auto-Detection Example
 
@@ -393,18 +424,21 @@ import {
 // Detect printer and loaded media
 const printer = detectSingleBrotherPrinter();
 if (printer) {
+  // Query printer to detect loaded media
   const status = await queryPrinterStatus(printer.device);
   console.log(`Loaded media: ${status.mediaWidth}mm`);
   
-  // Auto-detect appropriate label configuration
+  // Auto-detect from configured labels
   const detectedLabel = detectLabelWidth(status);
-  console.log(`Using label: ${detectedLabel}`);
+  console.log(`Detected label: ${detectedLabel}`);
   
   // Print with auto-detected settings
-  await printPngFileAuto({
-    filename: './label.png',
-    options: { labelWidth: detectedLabel || '62-mm-wide continuous' }
-  });
+  if (detectedLabel) {
+    await printPngFileAuto({
+      filename: './label.png',
+      options: { labelWidth: detectedLabel }
+    });
+  }
 }
 ```
 
@@ -517,12 +551,14 @@ Check if logging is currently enabled.
 
 ## Getting Printer Information
 
-First, you'll need the **VendorID (VID)** and **ProductID (PID)** of your printer:
+To add support for your printer, you'll need its **USB Product ID (PID)**:
 
-1. Download and use the [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) tool to identify the PID and VID
-2. Common Brother printer IDs:
-   - Vendor ID: `0x04f9` (Brother)
-   - Product IDs vary by model (e.g., `0x209d`, `0x2015`, etc.)
+1. **On Windows**: Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to identify the PID
+2. **On Linux/Mac**: Use `lsusb` command and look for Brother devices
+3. **Vendor ID**: Always `0x04F9` (Brother)
+4. **Product ID**: Varies by model (e.g., `0x2042` for QL-700)
+
+Once you have the Product ID, create a printer config file in `config/printers/` (see [Configuration System](#-configuration-system)).
 
 ## Image Requirements
 
@@ -554,20 +590,20 @@ Download a [sample PNG file](https://github.com/yiqun12/node-brother-label-print
 
 ```bash
 # Clone the repository
-git clone https://github.com/yiqun12/node-brother-label-printer.git
+git clone https://github.com/Zei33/node-brother-label-printer.git
 cd node-brother-label-printer
 
 # Install dependencies
 npm install
+
+# Build the project (required before testing)
+npm run build
 
 # Run tests
 npm test
 
 # Run tests with coverage
 npm run test:coverage
-
-# Build the project
-npm run build
 
 # Run linter
 npm run lint
@@ -582,57 +618,102 @@ npm run dev
 ### Project Structure
 
 ```
-├── src/                          # TypeScript source files
+node-brother-label-printer/
+├── config/                      # Runtime JSON configurations
+│   ├── printers/                # Printer specifications (add yours here)
+│   │   └── *.json              # Example: QL-700.json
+│   ├── labels/                  # Label specifications with calibrations
+│   │   └── *.json              # Example: 62-mm-wide-continuous.json
+│   └── README.md                # Configuration guide and calibration instructions
+│
+├── src/                         # TypeScript source files
 │   ├── lib/                     # Core library modules
 │   │   ├── calibration/         # Label calibration utilities
 │   │   │   └── labelCalibration.ts
-│   │   ├── config/              # Configuration loader
-│   │   │   └── configLoader.ts
-│   │   ├── image/               # Image processing
+│   │   ├── config/              # Runtime configuration loader
+│   │   │   └── configLoader.ts  # Loads JSON configs at runtime
+│   │   ├── image/               # Image processing pipeline
 │   │   │   ├── compression.ts   # TIFF PackBits compression
-│   │   │   ├── processing.ts    # Main image processing
-│   │   │   └── utils.ts         # Image utilities
-│   │   ├── printer/             # Printer communication
-│   │   │   ├── detection.ts     # Printer detection
-│   │   │   ├── printing.ts      # Printing operations
-│   │   │   └── status.ts        # Status queries
-│   │   └── utils/               # Utility functions
-│   │       └── logger.ts        # Debug logging
+│   │   │   ├── processing.ts    # Adaptive image processing
+│   │   │   └── utils.ts         # Image manipulation utilities
+│   │   ├── printer/             # Printer communication and detection
+│   │   │   ├── detection.ts     # Auto-detection and capabilities
+│   │   │   ├── printing.ts      # USB communication and printing
+│   │   │   └── status.ts        # Status query and error handling
+│   │   └── utils/               # Shared utilities
+│   │       └── logger.ts        # Debug logging system
 │   ├── types/                   # TypeScript type definitions
-│   │   ├── config.ts            # Configuration types
-│   │   ├── core.ts              # Core types
-│   │   ├── external.ts          # External library types
+│   │   ├── config.ts            # Configuration file types
+│   │   ├── core.ts              # Core data types
+│   │   ├── external.ts          # External library types (pngparse)
 │   │   ├── index.ts             # Type exports
-│   │   ├── label.ts             # Label types
-│   │   └── printer.ts           # Printer types
+│   │   ├── label.ts             # Label and calibration types
+│   │   └── printer.ts           # Printer and capability types
 │   ├── __tests__/               # Jest test files
-│   ├── types.ts                 # Legacy type exports
-│   └── index.ts                 # Main export file
-├── config/                      # JSON configuration files
-│   ├── labels/                  # Label specifications
-│   │   ├── 29x90-mm-die-cut.json
-│   │   ├── 38x90-mm-die-cut.json
-│   │   └── 62-mm-wide-continuous.json
-│   ├── printers/                # Printer specifications
-│   │   └── QL-700.json
-│   └── README.md                # Configuration guide
-├── dist/                        # Compiled output (ESM + CJS)
-├── samples/                     # Sample label images
-├── scripts/                     # Build and utility scripts
-└── .github/workflows/           # CI/CD workflows
+│   ├── types.ts                 # Type re-exports for compatibility
+│   ├── pngparse.d.ts            # PNG parser type definitions
+│   └── index.ts                 # Main library entry point
+│
+├── dist/                        # Compiled output (auto-generated)
+│   ├── *.js                     # ES Module files
+│   ├── *.cjs                    # CommonJS files
+│   ├── *.d.ts                   # TypeScript declarations
+│   └── lib/, types/             # Compiled module structure
+│
+├── scripts/                     # Build scripts
+│   └── fix-cjs-extensions.js   # CJS extension fixer for dual builds
+│
+├── samples/                     # Sample label images for testing
+├── test-label-printing.js       # Manual test script
+├── package.json                 # Project configuration
+├── tsconfig.json                # TypeScript config (ESM)
+├── tsconfig.cjs.json            # TypeScript config (CJS)
+├── jest.config.js               # Jest test configuration
+└── eslint.config.js             # ESLint configuration
 ```
 
 ### Build System
 
-This project uses a sophisticated build system that generates both CommonJS and ES Module outputs:
+The project uses a dual-build system for maximum compatibility:
 
-- **ESM**: `dist/*.js` - ES Module format for modern environments
-- **CJS**: `dist/*.cjs` - CommonJS format for Node.js compatibility  
-- **Types**: `dist/*.d.ts` - TypeScript declarations for both formats
+**Build Process**:
+1. **Clean**: `npm run clean` - Removes old build artifacts
+2. **ESM Build**: `npm run build:esm` - Compiles TypeScript to ES Modules (`.js`)
+3. **CJS Build**: `npm run build:cjs` - Compiles to CommonJS, then converts imports and renames to `.cjs`
+4. **Extension Fix**: `scripts/fix-cjs-extensions.js` - Ensures `.cjs` files use `.cjs` imports
+
+**Output**:
+- `dist/*.js` - ES Module format for modern bundlers and Node.js ESM
+- `dist/*.cjs` - CommonJS format for Node.js `require()`
+- `dist/*.d.ts` - TypeScript declarations (shared by both)
+
+**Package Configuration** (from `package.json`):
+```json
+{
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
+```
+
+### Adding Configuration Files
+
+1. **Add printer config**: Create `config/printers/YOUR-MODEL.json`
+2. **Add label config**: Create `config/labels/YOUR-LABEL.json`
+3. **Rebuild**: `npm run build` (includes config files in dist)
+4. **Test**: Use `test-label-printing.js` to validate
 
 ### Testing
 
-Tests use Jest with TypeScript support:
+Jest tests with TypeScript support:
 
 ```bash
 npm test              # Run all tests
@@ -642,41 +723,52 @@ npm run test:coverage # Run tests with coverage report
 
 ## Contributing
 
-We welcome contributions! Please follow these steps:
+We welcome contributions! The JSON configuration system makes it easy to add support for new printers and labels.
+
+### Adding Printer Support
 
 1. Fork this repo
 2. Clone your fork: `git clone <your-fork-url>`
-3. Install dependencies: `npm install`  
-4. Create a feature branch: `git checkout -b feature/amazing-feature`
-5. Make your changes and add tests
-6. Ensure all tests pass: `npm test`
-7. Ensure the build works: `npm run build`
-8. Commit your changes: `git commit -m 'Add amazing feature'`
-9. Push to your branch: `git push origin feature/amazing-feature`
-10. Open a Pull Request
+3. Create `config/printers/YOUR-MODEL.json` with your printer's specifications
+4. Test with your printer using `test-label-printing.js`
+5. Submit a Pull Request with your configuration file
 
-### Code Quality
+### Adding Label Support
+
+1. Create `config/labels/YOUR-LABEL.json` with label specifications
+2. Test and calibrate using the procedures in `config/README.md`
+3. Submit a Pull Request with calibrated values
+
+### Code Contributions
+
+1. Create a feature branch: `git checkout -b feature/amazing-feature`
+2. Make your changes and add tests
+3. Ensure all tests pass: `npm test`
+4. Ensure the build works: `npm run build`
+5. Run linter: `npm run lint`
+6. Commit your changes: `git commit -m 'Add amazing feature'`
+7. Push to your branch: `git push origin feature/amazing-feature`
+8. Open a Pull Request
+
+### Code Quality Standards
 
 - Write TypeScript with full type safety
-- Add tests for new features
-- Follow the existing code style
-- Update documentation as needed
+- Add tests for new features (Jest)
+- Follow existing code structure and patterns
+- Update documentation for API changes
+- Use ESLint configuration provided
+- Add JSDoc comments for public APIs
 
 ## Support
 
 If you enjoy this project and would like to support its development:
 
-- ☕ [Buy me a coffee](https://buymeacoffee.com/yeequn12)
-- 💸 Zelle: admin@eatifydash.com (Name: Yiqun Xu)
-- 📧 Email: admin@eatifydash.com
+- ☕ [Buy me a coffee (original author)](https://buymeacoffee.com/yeequn12)
 
 ## Contributors
 
-Thanks to our contributors! 🎉👏
+Thanks to all contributors! 🎉👏
 
+- [Zei33](https://github.com/Zei33) - 2.0 rewrite author
 - [Yiqun Xu](https://github.com/yiqun12) - Original author
-- [Yutao Li](https://github.com/Yutao-Li-306) - Contributor
-
-## License
-
-ISC - See [LICENSE](LICENSE) file for details.
+- [Yutao Li](https://github.com/Yutao-Li-306) - Original Contributor

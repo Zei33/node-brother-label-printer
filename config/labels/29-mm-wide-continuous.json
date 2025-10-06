@@ -1,0 +1,16 @@
+{
+  "name": "29-mm-wide continuous",
+  "displayName": "29 Mm Wide Continuous",
+  "type": "continuous",
+  "widthMm": 29,
+  "lengthMm": null,
+  "calibration": {
+    "leftOffsetAdjustment": 0,
+    "topOffsetAdjustment": 0,
+    "lengthAdjustmentMm": 0
+  },
+  "processingGroup": "standard",
+  "requiresSpecialHandling": false,
+  "specialHandlingNotes": null,
+  "forceStandardQuality": true
+}
